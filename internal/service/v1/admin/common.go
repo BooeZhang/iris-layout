@@ -22,13 +22,15 @@ func (cs *CommService) Login(ctx iris.Context, name, pwd string) (*schema.LoginR
 		UserName: "test",
 	}
 
-	token, err := jwtx.Signer.Sign(claims)
+	accessToken, err := jwtx.GenAccessToken(claims)
+	refreshToken, err := jwtx.GenRefreshToken(claims)
 	if err != nil {
 		return nil, err
 	}
 
 	return &schema.LoginRes{
-		Token: string(token),
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 
 }

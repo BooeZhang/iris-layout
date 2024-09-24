@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"fmt"
+	"irir-layout/pkg/erroron"
+	"irir-layout/pkg/response"
 	"net"
 	"net/http"
 	"strconv"
@@ -82,6 +84,11 @@ func (h *HttpServer) Setup() {
 	if h.Debug {
 		h.SetupSwagger()
 	}
+	h.Application.OnErrorCode(iris.StatusInternalServerError, func(ctx iris.Context) {
+		ctx.StopExecution()
+		ctx.StatusCode(iris.StatusInternalServerError)
+		response.Error(ctx, erroron.ErrInternalServer, nil)
+	})
 }
 
 // LoadRouter 加载自定义路由

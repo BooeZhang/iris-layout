@@ -6,7 +6,8 @@ import (
 
 // Jwt JWT配置项.
 type Jwt struct {
-	Key        string        `json:"key"         mapstructure:"key"`
-	Expired    time.Duration `json:"expired"     mapstructure:"expired"`
-	MaxRefresh time.Duration `json:"max-refresh" mapstructure:"max-refresh"`
+	Key            string        `json:"key"         mapstructure:"key"`
+	AccessExpired  time.Duration `json:"access-expired"     mapstructure:"access-expired"`
+	RefreshExpired time.Duration `json:"refresh-expired" mapstructure:"refresh-expired"`
+	Salt           string        `json:"salt"          mapstructure:"salt"`
 }

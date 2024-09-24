@@ -50,7 +50,7 @@ func DecodeErr(err error) (int, int, string) {
 	}
 
 	var _errorOn *Errno
-	if errors.As(err, _errorOn) {
+	if errors.As(err, &_errorOn) {
 		httpCode := _errorOn.StatusCode()
 		return _errorOn.Code, httpCode, _errorOn.Msg
 	} else {

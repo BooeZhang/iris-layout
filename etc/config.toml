@@ -48,6 +48,9 @@ name = ""
 [jwt]
 # 密钥
 key = "secret key"
-# 过期时间(分)
-expired = 15
-max-refresh = 2
+# 访问令牌过期时间(分)
+access-expire = 15
+# 刷新令牌过期时间(小时)
+refresh-expire = 24
+# 随机盐，长度必须是 16 24 32
+salt = "BgCA87jH2xrN2z3X"

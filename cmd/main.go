@@ -37,7 +37,7 @@ func printWorkingDir() {
 // @host localhost:8080
 // @BasePath /v2
 func main() {
-	configFile := flag.String("c", "", "-c 选项用于指定要使用的配置文件")
+	configFile := flag.String("c", "etc/config.toml", "-c 选项用于指定要使用的配置文件")
 	flag.Parse()
 	config.InitConfig(*configFile)
 
