@@ -1,0 +1,218 @@
+package core
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/iris-contrib/swagger"
+	"github.com/iris-contrib/swagger/swaggerFiles"
+	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/middleware/logger"
+	"github.com/kataras/iris/v12/middleware/pprof"
+	"github.com/kataras/iris/v12/middleware/recover"
+	"github.com/kataras/iris/v12/middleware/requestid"
+	"github.com/kataras/iris/v12/x/errors"
+
+	"irir-layout/config"
+	_ "irir-layout/docs"
+)
+
+// Router 加载路由，使用侧提供接口，实现侧需要实现该接口
+type Router interface {
+	Load(engine *iris.Application)
+}
+
+// HttpServer 通用 web 服务.
+type HttpServer struct {
+	BindAddress       string         // 监听地址
+	BindPort          int            // 监听端口
+	Debug             bool           // 启动模式
+	CertKey           config.CertKey // 启用https
+	Middlewares       []string       // 启用的中间件
+	Health            bool           // 是否启用健康检查
+	EnableMetrics     bool           // 是否启用监控
+	EnableProfiling   bool           // 是否启用性能分析工具
+	*iris.Application                // web 驱动
+}
+
+// NewHttpServer 从给定的配置返回 GenericAPIServer 的新实例。
+func NewHttpServer(cnf *config.Config) *HttpServer {
+	s := &HttpServer{
+		BindAddress: cnf.HttpServerConfig.BindAddress,
+		BindPort:    cnf.HttpServerConfig.BindPort,
+		CertKey: config.CertKey{
+			CertFile: cnf.HttpServerConfig.ServerCert.CertFile,
+			KeyFile:  cnf.HttpServerConfig.ServerCert.KeyFile,
+		},
+		Debug:           cnf.HttpServerConfig.Debug,
+		Health:          cnf.HttpServerConfig.Health,
+		Middlewares:     cnf.HttpServerConfig.Middlewares,
+		EnableMetrics:   cnf.HttpServerConfig.EnableMetrics,
+		EnableProfiling: cnf.HttpServerConfig.EnableProfiling,
+		Application:     iris.New(),
+	}
+
+	InitGenericAPIServer(s)
+
+	return s
+}
+
+func InitGenericAPIServer(s *HttpServer) {
+	if s.Debug {
+		// 启动 API 文档
+		// s.SetupSwagger()
+	}
+	s.Setup()
+	s.InstallMiddlewares()
+	s.InstallAPIs()
+}
+
+// address 将主机 IP 地址和主机端口号连接成一个地址字符串，例如：0.0.0.0:8443。
+func (h *HttpServer) address() string {
+	return net.JoinHostPort(h.BindAddress, strconv.Itoa(h.BindPort))
+}
+
+func (h *HttpServer) Setup() {
+	if h.Debug {
+		h.SetupSwagger()
+	}
+}
+
+// LoadRouter 加载自定义路由
+func (h *HttpServer) LoadRouter(rs ...Router) {
+	for _, r := range rs {
+		r.Load(h.Application)
+	}
+}
+
+func (h *HttpServer) InstallAPIs() {
+	// 添加健康检查api
+	if h.Health {
+		h.Get("/health", func(ctx iris.Context) {
+			_ = ctx.JSON(iris.Map{"code": 0, "msg": "OK"})
+		})
+	}
+
+	// 添加监控
+	// if h.EnableMetrics {
+	// 	prometheus := ginprometheus.NewPrometheus("gin")
+	// 	prometheus.Use(h.Engine)
+	// }
+
+	// 添加性能测试工具
+	if h.EnableProfiling {
+		p := pprof.New()
+		h.Any("/debug/pprof", p)
+		h.Any("/debug/pprof/{action:path}", p)
+	}
+}
+
+// InstallMiddlewares 初始化中间件。
+func (h *HttpServer) InstallMiddlewares() {
+	// 必要中间件
+	h.UseRouter(recover.New())
+	h.UseRouter(logger.New())
+	h.UseRouter(requestid.New())
+	// h.Use(middleware.RequestID())
+	// h.Use(middleware.Context())
+	//
+	// // 自定义中间件
+	// for _, m := range h.Middlewares {
+	// 	mw, ok := middleware.Middlewares[m]
+	// 	if !ok {
+	// 		log.Warnf("can not find middleware: %s", m)
+	//
+	// 		continue
+	// 	}
+	//
+	// 	log.Infof("use middleware: %s", m)
+	// 	h.Use(mw)
+	// }
+}
+
+// Run 启动 http 服务器.
+func (h *HttpServer) Run() {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// 健康检查
+	go func() {
+		if h.Health {
+			if err := h.ping(ctx); err != nil {
+				h.Logger().Fatal(err.Error())
+			}
+		}
+	}()
+
+	h.Logger().Infof("Start to listening the incoming requests on http address: %s", h.address())
+	var (
+		key, cert = h.CertKey.KeyFile, h.CertKey.CertFile
+		serverErr error
+	)
+
+	cf := config.GetConfig()
+
+	if cert == "" || key == "" {
+		serverErr = h.Listen(h.address(), iris.WithOptimizations, iris.WithConfiguration(cf.Iris))
+	} else {
+		serverErr = h.Application.Run(iris.TLS(h.address(), cert, key), iris.WithOptimizations, iris.WithConfiguration(cf.Iris))
+	}
+
+	if serverErr != nil && !errors.Is(serverErr, http.ErrServerClosed) {
+		h.Logger().Fatal(serverErr.Error())
+	}
+
+	h.Logger().Infof("Server on %s stopped", h.address())
+
+}
+
+// ping 服务器健康
+func (h *HttpServer) ping(ctx context.Context) error {
+	url := fmt.Sprintf("http://%s/health", h.address())
+	if strings.Contains(h.address(), "0.0.0.0") {
+		url = fmt.Sprintf("http://127.0.0.1:%d/health", h.BindPort)
+	}
+
+	for {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			h.Logger().Info("The router has been deployed successfully.")
+			_ = resp.Body.Close()
+
+			return nil
+		}
+
+		// 暂停 1 秒钟
+		h.Logger().Info("Waiting for the router, retry in 1 second.")
+		time.Sleep(1 * time.Second)
+
+		select {
+		case <-ctx.Done():
+			h.Logger().Fatal("can not ping http server within the specified time interval.")
+		default:
+		}
+	}
+}
+
+// SetupSwagger 启用swagger
+func (h *HttpServer) SetupSwagger() {
+	swaggerUI := swagger.Handler(swaggerFiles.Handler,
+		swagger.URL("/swagger/swagger.json"),
+		swagger.DeepLinking(true),
+		swagger.Prefix("/swagger"),
+	)
+	h.Get("/swagger", swaggerUI)
+	h.Get("/swagger/{any:path}", swaggerUI)
+}
