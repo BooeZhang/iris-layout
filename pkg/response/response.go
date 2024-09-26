@@ -60,6 +60,7 @@ func Error(ctx iris.Context, err error, data any) {
 		msg = "服务器内部错误"
 	}
 
+	ctx.StopWithStatus(httpCode)
 	sendErr := ctx.StopWithJSON(httpCode, iris.Map{
 		"code": code,
 		"msg":  msg,

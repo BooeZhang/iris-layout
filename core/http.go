@@ -3,14 +3,18 @@ package core
 import (
 	"context"
 	"fmt"
-	"irir-layout/pkg/erroron"
-	"irir-layout/pkg/response"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/kataras/iris/v12/middleware/cors"
+	"github.com/kataras/iris/v12/middleware/requestid"
+
+	"irir-layout/pkg/erroron"
+	"irir-layout/pkg/log"
+	"irir-layout/pkg/response"
 
 	"github.com/iris-contrib/swagger"
 	"github.com/iris-contrib/swagger/swaggerFiles"
@@ -18,7 +22,6 @@ import (
 	"github.com/kataras/iris/v12/middleware/logger"
 	"github.com/kataras/iris/v12/middleware/pprof"
 	"github.com/kataras/iris/v12/middleware/recover"
-	"github.com/kataras/iris/v12/middleware/requestid"
 	"github.com/kataras/iris/v12/x/errors"
 
 	"irir-layout/config"
@@ -60,11 +63,16 @@ func NewHttpServer(cnf *config.Config) *HttpServer {
 		Application:     iris.New(),
 	}
 
+	if len(cnf.LogConfig.Formatter) != 0 {
+		s.Application.Logger().SetFormat(cnf.LogConfig.Formatter, "    ")
+	}
+
 	InitGenericAPIServer(s)
 
 	return s
 }
 
+// InitGenericAPIServer 初始化通用 API 服务
 func InitGenericAPIServer(s *HttpServer) {
 	if s.Debug {
 		// 启动 API 文档
@@ -123,32 +131,28 @@ func (h *HttpServer) InstallAPIs() {
 // InstallMiddlewares 初始化中间件。
 func (h *HttpServer) InstallMiddlewares() {
 	// 必要中间件
+	logConf := logger.DefaultConfig()
+	logConf.LogFuncCtx = log.FuncCtx
 	h.UseRouter(recover.New())
-	h.UseRouter(logger.New())
 	h.UseRouter(requestid.New())
-	// h.Use(middleware.RequestID())
-	// h.Use(middleware.Context())
-	//
-	// // 自定义中间件
-	// for _, m := range h.Middlewares {
-	// 	mw, ok := middleware.Middlewares[m]
-	// 	if !ok {
-	// 		log.Warnf("can not find middleware: %s", m)
-	//
-	// 		continue
-	// 	}
-	//
-	// 	log.Infof("use middleware: %s", m)
-	// 	h.Use(mw)
-	// }
+	h.UseRouter(logger.New(logConf))
+	h.UseRouter(cors.New().Handler())
+	h.UseRouter(iris.Compression)
 }
 
 // Run 启动 http 服务器.
 func (h *HttpServer) Run() {
-	var wg sync.WaitGroup
-	wg.Add(1)
+	quit := make(chan struct{})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	// 优雅退出
+	iris.RegisterOnInterrupt(func() {
+		quitErr := h.Application.Shutdown(ctx)
+		if quitErr != nil {
+			h.Logger().Errorf("quit error: %s", quitErr)
+		}
+		close(quit)
+	})
 
 	// 健康检查
 	go func() {
@@ -178,7 +182,7 @@ func (h *HttpServer) Run() {
 	}
 
 	h.Logger().Infof("Server on %s stopped", h.address())
-
+	<-quit
 }
 
 // ping 服务器健康

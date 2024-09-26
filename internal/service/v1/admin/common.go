@@ -3,34 +3,50 @@ package admin
 import (
 	"github.com/kataras/iris/v12"
 
-	v1 "irir-layout/internal/service/v1"
+	"irir-layout/internal/repo"
+	rp "irir-layout/internal/repo/mysql"
+	"irir-layout/pkg/erroron"
 	"irir-layout/pkg/jwtx"
 	"irir-layout/pkg/schema"
+	"irir-layout/store/mysql"
 )
 
 type CommService struct {
-	ctx *v1.ServiceContext
+	userRepo repo.UserRepo
 }
 
 func NewCommService() *CommService {
-	return &CommService{ctx: v1.NewServiceContext()}
+	return &CommService{
+		userRepo: rp.NewUserRepo(mysql.GetDB()),
+	}
 }
 
-func (cs *CommService) Login(ctx iris.Context, name, pwd string) (*schema.LoginRes, error) {
-	claims := jwtx.UserClaims{
-		UserId:   1,
-		UserName: "test",
-	}
-
-	accessToken, err := jwtx.GenAccessToken(claims)
-	refreshToken, err := jwtx.GenRefreshToken(claims)
+func (cs *CommService) Login(ctx iris.Context, name, pwd string) (schema.LoginRes, error) {
+	var (
+		res schema.LoginRes
+	)
+	user, err := cs.userRepo.GetUserByName(ctx, name)
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
-	return &schema.LoginRes{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
+	if user == nil || user.ID == 0 {
+		return res, erroron.ErrNotFoundUser
+	}
+
+	if user.Compare(pwd) != nil {
+		return res, erroron.ErrUserNameOrPwd
+	}
+
+	claims := jwtx.UserClaims{
+		UserId:   user.ID,
+		UserName: user.Account,
+	}
+	res.AccessToken, err = jwtx.GenAccessToken(claims)
+	res.RefreshToken, err = jwtx.GenRefreshToken(claims)
+	if err != nil {
+		return res, err
+	}
+	return res, nil
 
 }

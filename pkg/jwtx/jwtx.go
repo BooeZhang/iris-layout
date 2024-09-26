@@ -1,10 +1,12 @@
 package jwtx
 
 import (
+	"time"
+
 	"github.com/kataras/iris/v12"
+
 	"irir-layout/pkg/erroron"
 	"irir-layout/pkg/response"
-	"time"
 
 	"github.com/kataras/iris/v12/middleware/jwt"
 
@@ -35,6 +37,7 @@ func GenRefreshToken(claims UserClaims) (string, error) {
 	return string(token), err
 }
 
+// VerifyMiddleware token 校验中间件
 func VerifyMiddleware() iris.Handler {
 	cf := config.GetConfig()
 	sigKey := []byte(cf.JwtConfig.Key)
@@ -50,4 +53,15 @@ func VerifyMiddleware() iris.Handler {
 	return verifier.Verify(func() any {
 		return new(UserClaims)
 	})
+}
+
+// GetClaims 获取 token Claims
+func GetClaims(ctx iris.Context) *UserClaims {
+	claims := jwt.Get(ctx).(*UserClaims)
+	return claims
+}
+
+// GetUserID Get user id
+func GetUserID(ctx iris.Context) uint {
+	return GetClaims(ctx).UserId
 }

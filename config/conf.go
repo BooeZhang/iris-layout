@@ -19,6 +19,9 @@ type Config struct {
 	Iris             iris.Configuration `json:"iris"  mapstructure:"iris"`
 	HttpServerConfig *HttpServer        `json:"http"   mapstructure:"http"`
 	JwtConfig        *Jwt               `json:"jwt"      mapstructure:"jwt"`
+	MysqlConfig      *MySQL             `json:"mysql"    mapstructure:"mysql"`
+	RedisConfig      *Redis             `json:"redis"    mapstructure:"redis"`
+	LogConfig        Log                `json:"log"      mapstructure:"log"`
 }
 
 // InitConfig 初始化配置

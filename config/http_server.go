@@ -10,6 +10,7 @@ type HttpServer struct {
 	EnableMetrics   bool     `json:"enable-metrics" mapstructure:"enable-metrics"`
 	EnableProfiling bool     `json:"enable-profiling" mapstructure:"enable-profiling"`
 	ServerCert      CertKey  `json:"tls"          mapstructure:"tls"` // ServerCert TLS 证书信息
+	CasbinModelPath string   `json:"casbin-model-path" mapstructure:"casbin-model-path"`
 }
 
 // CertKey 证书相关配置
