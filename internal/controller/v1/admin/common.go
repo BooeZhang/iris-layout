@@ -3,10 +3,9 @@ package admin
 import (
 	"github.com/kataras/iris/v12"
 
+	"irir-layout/internal/model"
 	srvv1 "irir-layout/internal/service/v1/admin"
-	"irir-layout/pkg/erroron"
 	"irir-layout/pkg/response"
-	"irir-layout/pkg/schema"
 )
 
 type CommonController struct {
@@ -25,15 +24,14 @@ func NewCommonController() *CommonController {
 // @Accept application/json
 // @Produce application/json
 // @Param   data body schema.LoginReq true "."
-// @Success 200 {object} response.Response{data=schema.LoginRes} "ok"
+// @Success 200 {object} response.Response{data=model.LoginRes} "ok"
 // @Router /login/ [post]
 func (cc CommonController) Login(ctx iris.Context) {
-	var param schema.LoginReq
+	var param model.LoginReq
 
 	err := ctx.ReadJSON(&param)
 	if err != nil {
-		ctx.Application().Logger().Error(err.Error())
-		response.Error(ctx, erroron.ErrParameter, nil)
+		response.Error(ctx, err, nil)
 		return
 	}
 	data, err := cc.srv.Login(ctx, param.UserName, param.Password)

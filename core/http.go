@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/kataras/iris/v12/middleware/cors"
 	"github.com/kataras/iris/v12/middleware/requestid"
 
@@ -92,6 +93,9 @@ func (h *HttpServer) Setup() {
 	if h.Debug {
 		h.SetupSwagger()
 	}
+
+	h.Validator = validator.New()
+
 	h.Application.OnErrorCode(iris.StatusInternalServerError, func(ctx iris.Context) {
 		ctx.StopExecution()
 		ctx.StatusCode(iris.StatusInternalServerError)

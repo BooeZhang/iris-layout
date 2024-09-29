@@ -3,11 +3,11 @@ package admin
 import (
 	"github.com/kataras/iris/v12"
 
+	"irir-layout/internal/model"
 	"irir-layout/internal/repo"
 	rp "irir-layout/internal/repo/mysql"
 	"irir-layout/pkg/erroron"
 	"irir-layout/pkg/jwtx"
-	"irir-layout/pkg/schema"
 	"irir-layout/store/mysql"
 )
 
@@ -21,9 +21,9 @@ func NewCommService() *CommService {
 	}
 }
 
-func (cs *CommService) Login(ctx iris.Context, name, pwd string) (schema.LoginRes, error) {
+func (cs *CommService) Login(ctx iris.Context, name, pwd string) (model.LoginRes, error) {
 	var (
-		res schema.LoginRes
+		res model.LoginRes
 	)
 	user, err := cs.userRepo.GetUserByName(ctx, name)
 	if err != nil {

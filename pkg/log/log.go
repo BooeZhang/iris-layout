@@ -37,7 +37,8 @@ func Debug(ctx iris.Context, msg any) {
 }
 
 func Debugf(ctx iris.Context, format string, args ...interface{}) {
-	ctx.Application().Logger().Logf(golog.DebugLevel, format, args, fields(ctx))
+	args = append(args, fields(ctx))
+	ctx.Application().Logger().Logf(golog.DebugLevel, format, args)
 }
 
 func Info(ctx iris.Context, msg any) {
@@ -45,14 +46,16 @@ func Info(ctx iris.Context, msg any) {
 }
 
 func Infof(ctx iris.Context, format string, args ...any) {
-	ctx.Application().Logger().Logf(golog.InfoLevel, format, args, fields(ctx))
+	args = append(args, fields(ctx))
+	ctx.Application().Logger().Logf(golog.InfoLevel, format, args)
 }
 
 func Warn(ctx iris.Context, msg any) {
 	ctx.Application().Logger().Log(golog.WarnLevel, msg, fields(ctx))
 }
 func Warnf(ctx iris.Context, format string, args ...any) {
-	ctx.Application().Logger().Logf(golog.WarnLevel, format, args, fields(ctx))
+	args = append(args, fields(ctx))
+	ctx.Application().Logger().Logf(golog.WarnLevel, format, args)
 }
 
 func Error(ctx iris.Context, msg any) {
@@ -60,5 +63,6 @@ func Error(ctx iris.Context, msg any) {
 }
 
 func Errorf(ctx iris.Context, format string, args ...any) {
-	ctx.Application().Logger().Logf(golog.ErrorLevel, format, args, fields(ctx))
+	args = append(args, fields(ctx))
+	ctx.Application().Logger().Logf(golog.ErrorLevel, format, args...)
 }
