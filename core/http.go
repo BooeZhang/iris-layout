@@ -64,12 +64,13 @@ func NewHttpServer(cnf *config.Config) *HttpServer {
 		Application:     iris.New(),
 	}
 
+	// 日志配置
 	if len(cnf.LogConfig.Formatter) != 0 {
 		s.Application.Logger().SetFormat(cnf.LogConfig.Formatter, "    ")
 	}
+	s.Application.Logger().SetTimeFormat("2006/01/02 15:04:05")
 
 	InitGenericAPIServer(s)
-
 	return s
 }
 

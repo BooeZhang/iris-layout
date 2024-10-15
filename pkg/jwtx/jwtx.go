@@ -5,9 +5,6 @@ import (
 
 	"github.com/kataras/iris/v12"
 
-	"irir-layout/pkg/erroron"
-	"irir-layout/pkg/response"
-
 	"github.com/kataras/iris/v12/middleware/jwt"
 
 	"irir-layout/config"
@@ -48,7 +45,10 @@ func VerifyMiddleware() iris.Handler {
 		}
 		ctx.StopExecution()
 		ctx.StatusCode(iris.StatusUnauthorized)
-		response.Error(ctx, erroron.ErrTokenInvalid, nil)
+		_ = ctx.StopWithJSON(401, iris.Map{
+			"code": 401,
+			"msg":  "token 无效",
+			"data": nil})
 	}
 	return verifier.Verify(func() any {
 		return new(UserClaims)
@@ -57,11 +57,19 @@ func VerifyMiddleware() iris.Handler {
 
 // GetClaims 获取 token Claims
 func GetClaims(ctx iris.Context) *UserClaims {
-	claims := jwt.Get(ctx).(*UserClaims)
-	return claims
+	claims, ok := jwt.Get(ctx).(*UserClaims)
+	if ok {
+		return claims
+	}
+	return &UserClaims{}
 }
 
 // GetUserID Get user id
 func GetUserID(ctx iris.Context) uint {
 	return GetClaims(ctx).UserId
+}
+
+// GetUserName 获取用户名
+func GetUserName(ctx iris.Context) string {
+	return GetClaims(ctx).UserName
 }
