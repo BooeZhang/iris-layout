@@ -15,11 +15,10 @@ import (
 	"irir-layout/pkg/jwtx"
 )
 
-func TextHandler(l *golog.Log) bool {
-	prefix := golog.GetTextForLevel(l.Level, true)
-	file := "???"
-	line := 0
-
+// 获取日志文件名和行号
+func getLogSource() (file string, line int) {
+	file = "???"
+	line = 0
 	pc := make([]uintptr, 64)
 	n := runtime.Callers(3, pc)
 	if n != 0 {
@@ -41,17 +40,19 @@ func TextHandler(l *golog.Log) bool {
 
 	slices := strings.Split(file, "/")
 	file = slices[len(slices)-1]
+	return file, line
+}
 
-	message := fmt.Sprintf("%s %s [%s:%d] %s",
-		prefix, l.FormatTime(), file, line, l.Message)
+func TextHandler(l *golog.Log) bool {
+	file, line := getLogSource()
+	l.Message = fmt.Sprintf("[%s:%d] %s", file, line, l.Message)
+	return false
+}
 
-	if l.NewLine {
-		message += "\n"
-	}
-
-	// golog.Logf(golog.ParseLevel(prefix), "%s [%s:%d] %s", l.FormatTime(), file, line, l.Message)
-	fmt.Print(message)
-	return true
+func JSONHandler(l *golog.Log) bool {
+	file, line := getLogSource()
+	l.Fields = golog.Fields{"file": file, "line": line}
+	return false
 }
 
 func FuncCtx(ctx iris.Context, latency time.Duration) {
@@ -76,41 +77,41 @@ func FuncCtx(ctx iris.Context, latency time.Duration) {
 	}
 }
 
-func fields(ctx iris.Context) golog.Fields {
+func Fields(ctx iris.Context) golog.Fields {
 	return golog.Fields{"requestID": requestid.Get(ctx)}
 }
 
 func Debug(ctx iris.Context, msg any) {
-	ctx.Application().Logger().Log(golog.DebugLevel, msg, fields(ctx))
+	ctx.Application().Logger().Log(golog.DebugLevel, msg, Fields(ctx))
 }
 
 func Debugf(ctx iris.Context, format string, args ...interface{}) {
-	args = append(args, fields(ctx))
+	args = append(args, Fields(ctx))
 	ctx.Application().Logger().Logf(golog.DebugLevel, format, args)
 }
 
 func Info(ctx iris.Context, msg any) {
-	ctx.Application().Logger().Log(golog.InfoLevel, msg, fields(ctx))
+	ctx.Application().Logger().Log(golog.InfoLevel, msg, Fields(ctx))
 }
 
 func Infof(ctx iris.Context, format string, args ...any) {
-	args = append(args, fields(ctx))
+	args = append(args, Fields(ctx))
 	ctx.Application().Logger().Logf(golog.InfoLevel, format, args)
 }
 
 func Warn(ctx iris.Context, msg any) {
-	ctx.Application().Logger().Log(golog.WarnLevel, msg, fields(ctx))
+	ctx.Application().Logger().Log(golog.WarnLevel, msg, Fields(ctx))
 }
 func Warnf(ctx iris.Context, format string, args ...any) {
-	args = append(args, fields(ctx))
+	args = append(args, Fields(ctx))
 	ctx.Application().Logger().Logf(golog.WarnLevel, format, args)
 }
 
 func Error(ctx iris.Context, msg any) {
-	ctx.Application().Logger().Log(golog.ErrorLevel, msg, fields(ctx))
+	ctx.Application().Logger().Log(golog.ErrorLevel, msg, Fields(ctx))
 }
 
 func Errorf(ctx iris.Context, format string, args ...any) {
-	args = append(args, fields(ctx))
+	args = append(args, Fields(ctx))
 	ctx.Application().Logger().Logf(golog.ErrorLevel, format, args...)
 }

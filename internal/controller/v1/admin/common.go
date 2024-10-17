@@ -1,10 +1,13 @@
 package admin
 
 import (
+	"fmt"
+
 	"github.com/kataras/iris/v12"
 
 	"irir-layout/internal/model"
 	srvv1 "irir-layout/internal/service/v1/admin"
+	"irir-layout/pkg/log"
 	"irir-layout/pkg/response"
 )
 
@@ -28,7 +31,7 @@ func NewCommonController() *CommonController {
 // @Router /login/ [post]
 func (cc CommonController) Login(ctx iris.Context) {
 	var param model.LoginReq
-
+	ctx.Application().Logger().Info(fmt.Sprintf("param: %v", param), log.Fields(ctx))
 	err := ctx.ReadJSON(&param)
 	if err != nil {
 		response.Error(ctx, err, nil)

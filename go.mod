@@ -9,7 +9,7 @@ require (
 	github.com/iris-contrib/swagger v0.0.0-20230820002204-56b041d3471a
 	github.com/kataras/golog v0.1.11
 	github.com/kataras/iris/v12 v12.2.11
-	github.com/redis/go-redis/v9 v9.5.1
+	github.com/redis/go-redis/v9 v9.6.2
 	github.com/spf13/viper v1.19.0
 	github.com/swaggo/swag v1.16.3
 	golang.org/x/crypto v0.27.0

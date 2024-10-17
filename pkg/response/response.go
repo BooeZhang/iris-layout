@@ -61,7 +61,7 @@ type validationError struct {
 func Error(ctx iris.Context, err error, data any) {
 	var validatorErrs validator.ValidationErrors
 	if errors.As(err, &validatorErrs) {
-		log.Errorf(ctx, "%s --- %s", ctx.Request().URL, err)
+		ctx.Application().Logger().Error(fmt.Sprintf("%s --- %s", ctx.Request().URL, err), log.Fields(ctx))
 		validationErrors := wrapValidationErrors(validatorErrs)
 		if config.GetConfig().HttpServerConfig.Debug {
 			Ok(ctx, erroron.ErrParameter, validationErrors)

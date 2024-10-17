@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/casbin/casbin/v2"
@@ -20,7 +21,6 @@ func NewAuthorizer(e *casbin.Enforcer) iris.Handler {
 		if !a.CheckPermission(ctx) {
 			a.RequirePermission(ctx)
 		}
-
 		ctx.Next()
 	}
 }
@@ -33,7 +33,7 @@ func (a *BasicAuthorizer) CheckPermission(ctx iris.Context) bool {
 
 	allowed, err := a.enforcer.Enforce(userId, path, method)
 	if err != nil {
-		log.Errorf(ctx, "校验权限失败: %s", err)
+		ctx.Application().Logger().Error(fmt.Sprintf("校验权限失败: %s", err), log.Fields(ctx))
 		return false
 	}
 
