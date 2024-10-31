@@ -227,7 +227,7 @@ func (h *HttpServer) ping(ctx context.Context) error {
 
 // SetupSwagger 启用swagger
 //
-//go:generate swag init -g ../cmd/main.go
+//go:generate swag init -g ../cmd/main.go -o ../docs
 func (h *HttpServer) SetupSwagger() {
 	swaggerUI := swagger.Handler(swaggerFiles.Handler,
 		swagger.URL("/swagger/swagger.json"),
