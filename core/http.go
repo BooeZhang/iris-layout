@@ -61,7 +61,7 @@ func NewHttpServer(cnf *config.Config) *HttpServer {
 		Middlewares:     cnf.HttpServerConfig.Middlewares,
 		EnableMetrics:   cnf.HttpServerConfig.EnableMetrics,
 		EnableProfiling: cnf.HttpServerConfig.EnableProfiling,
-		Application:     iris.New(),
+		Application:     iris.Default(),
 	}
 
 	// 日志配置
