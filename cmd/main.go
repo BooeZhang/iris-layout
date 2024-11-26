@@ -12,6 +12,7 @@ import (
 	"irir-layout/internal/model"
 	"irir-layout/internal/router"
 	"irir-layout/pkg/authz"
+	"irir-layout/pkg/log"
 	"irir-layout/store/mysql"
 	"irir-layout/store/redis"
 )
@@ -30,6 +31,8 @@ func main() {
 
 	printWorkingDir()
 	cf := config.GetConfig()
+
+	log.Init(cf)
 
 	mysql.DialToMysql(cf.MysqlConfig)
 	defer mysql.Close()

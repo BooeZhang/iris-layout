@@ -52,7 +52,7 @@ func InitConfig(fileName string) {
 
 // String 配置字符输出
 func (o *Config) String() string {
-	data, _ := json.Marshal(o)
+	data, _ := json.Marshal(*o)
 
 	return string(data)
 }

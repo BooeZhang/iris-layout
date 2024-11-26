@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -12,8 +13,21 @@ import (
 	"github.com/kataras/iris/v12/context"
 	"github.com/kataras/iris/v12/middleware/requestid"
 
+	"irir-layout/config"
 	"irir-layout/pkg/jwtx"
 )
+
+func Init(cf *config.Config) {
+	golog.SetLevel(cf.Iris.LogLevel)
+	if cf.LogConfig.Formatter == "json" {
+		golog.SetFormat(cf.LogConfig.Formatter)
+		golog.Handle(JSONHandler)
+	} else {
+		golog.Handle(TextHandler)
+	}
+
+	golog.SetTimeFormat("2006/01/02 15:04:05")
+}
 
 // 获取日志文件名和行号
 func getLogSource() (file string, line int) {
@@ -21,13 +35,15 @@ func getLogSource() (file string, line int) {
 	line = 0
 	pc := make([]uintptr, 64)
 	n := runtime.Callers(3, pc)
+	rootPath, _ := os.Getwd()
+
 	if n != 0 {
 		pc = pc[:n]
 		frames := runtime.CallersFrames(pc)
 
 		for {
 			frame, more := frames.Next()
-			if !strings.Contains(frame.File, "github.com/kataras/golog") {
+			if strings.Contains(frame.File, rootPath) {
 				file = frame.File
 				line = frame.Line
 				break
@@ -38,8 +54,8 @@ func getLogSource() (file string, line int) {
 		}
 	}
 
-	slices := strings.Split(file, "/")
-	file = slices[len(slices)-1]
+	file = strings.ReplaceAll(file, rootPath+"/", "")
+
 	return file, line
 }
 
@@ -77,8 +93,20 @@ func FuncCtx(ctx iris.Context, latency time.Duration) {
 	}
 }
 
-func Fields(ctx iris.Context) golog.Fields {
-	return golog.Fields{"requestID": requestid.Get(ctx)}
+func Fields(ctx iris.Context, values ...any) golog.Fields {
+	fields := golog.Fields{"requestID": requestid.Get(ctx)}
+	userName := jwtx.GetUserName(ctx)
+	if len(userName) > 0 {
+		fields["userName"] = userName
+	}
+
+	for _, v := range values {
+		switch value := v.(type) {
+		case error:
+			fields["error"] = value.Error()
+		}
+	}
+	return fields
 }
 
 func Debug(ctx iris.Context, msg any) {
