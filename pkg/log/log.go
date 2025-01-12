@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -36,6 +37,7 @@ func getLogSource() (file string, line int) {
 	pc := make([]uintptr, 64)
 	n := runtime.Callers(3, pc)
 	rootPath, _ := os.Getwd()
+	rootPath = filepath.ToSlash(rootPath)
 
 	if n != 0 {
 		pc = pc[:n]
