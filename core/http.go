@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	np "net/http/pprof"
 	"strconv"
 	"strings"
 	"time"
@@ -72,7 +73,7 @@ func NewHttpServer(cnf *config.Config) *HttpServer {
 func InitGenericAPIServer(s *HttpServer) {
 	if s.Debug {
 		// 启动 API 文档
-		// s.SetupSwagger()
+		s.SetupSwagger()
 	}
 	s.Setup()
 	s.InstallMiddlewares()
@@ -121,9 +122,19 @@ func (h *HttpServer) InstallAPIs() {
 
 	// 添加性能测试工具
 	if h.EnableProfiling {
-		p := pprof.New()
-		h.Any("/debug/pprof", p)
-		h.Any("/debug/pprof/{action:path}", p)
+		h.Application.HandleMany("GET", "/debug/pprof /debug/pprof/{action:path}", pprof.New())
+		h.Application.Get("/debug/pprof/profile", func(ctx iris.Context) {
+			np.Profile(ctx.ResponseWriter(), ctx.Request())
+		})
+		h.Application.Get("/debug/pprof/symbol", func(ctx iris.Context) {
+			np.Symbol(ctx.ResponseWriter(), ctx.Request())
+		})
+		h.Application.Get("/debug/pprof/cmdline", func(ctx iris.Context) {
+			np.Cmdline(ctx.ResponseWriter(), ctx.Request())
+		})
+		h.Application.Get("/debug/pprof/trace", func(ctx iris.Context) {
+			np.Trace(ctx.ResponseWriter(), ctx.Request())
+		})
 	}
 }
 
